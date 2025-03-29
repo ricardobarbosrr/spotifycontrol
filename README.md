@@ -101,4 +101,8 @@ Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes
 
 ---
 
-Desenvolvido por [Seu Nome]
+Desenvolvido por Ricardo Barbosa
+
+[github](https://github.com/ricardobarbosrr)
+
+[linkedin](https://www.linkedin.com/in/ricardobarbosrr/)
