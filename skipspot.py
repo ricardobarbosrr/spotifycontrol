@@ -16,28 +16,25 @@ mp_hands = mp.solutions.hands
 class MotionTrainer:
     def __init__(self):
         self.cap = cv2.VideoCapture(0)
-        self.recording = False
-        self.current_action = None
-        self.training_data = {}
-        self.current_frame = None
-        self.frame_count = 0
-        
-        # Inicializa o MediaPipe
-        self.hands = mp_hands.Hands(
+        self.mp_hands = mp.solutions.hands
+        self.hands = self.mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+            min_detection_confidence=0.8,
+            min_tracking_confidence=0.8
         )
+        self.mp_drawing = mp.solutions.drawing_utils
         
-        # Buffer para reconhecimento de ações
-        self.action_buffer = deque(maxlen=15)  # Aumentado o buffer para 15 frames
-        self.last_action_time = time.time()
-        self.action_cooldown = 1.0  # 1 segundo de cooldown entre ações
+        # Limites ajustados para melhor reconhecimento
+        self.hand_threshold = 0.25  # Para reconhecer mãos mais abertas
+        self.finger_threshold = 0.15  # Para melhor reconhecimento de dedos
+        self.angle_threshold = 15  # Ângulo em graus para considerar um dedo levantado
         
-        # Limite para gestos específicos
-        self.finger_threshold = 0.15  # Aumentado o limite para dedos
-        self.hand_threshold = 0.25    # Aumentado o limite para mão
+        # Buffer para confirmar gestos
+        self.gesture_buffer = []
+        self.buffer_size = 10  # Reduzido para respostas mais rápidas
+        self.cooldown = 0
+        self.cooldown_frames = 30  # 1 segundo a 30 FPS
         
         # Inicializa o reconhecimento de voz
         self.recognizer = sr.Recognizer()
@@ -90,10 +87,10 @@ class MotionTrainer:
         # Desenha as landmarks
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                mp.solutions.drawing_utils.draw_landmarks(
+                self.mp_drawing.draw_landmarks(
                     image,
                     hand_landmarks,
-                    mp_hands.HAND_CONNECTIONS
+                    self.mp_hands.HAND_CONNECTIONS
                 )
         
         return image, results
@@ -112,6 +109,31 @@ class MotionTrainer:
             print(f"Erro ao extrair features: {str(e)}")
             return None
 
+    def calculate_angle(self, point1, point2, point3):
+        """
+        Calcula o ângulo entre três pontos
+        """
+        a = np.array([point1.x, point1.y])
+        b = np.array([point2.x, point2.y])
+        c = np.array([point3.x, point3.y])
+        
+        ba = a - b
+        bc = c - b
+        
+        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+        angle = np.degrees(np.arccos(cosine_angle))
+        
+        return angle
+
+    def is_finger_straight(self, finger_tip, finger_dip, finger_pip, finger_mcp):
+        """
+        Verifica se um dedo está esticado usando ângulos
+        """
+        angle1 = self.calculate_angle(finger_tip, finger_dip, finger_pip)
+        angle2 = self.calculate_angle(finger_dip, finger_pip, finger_mcp)
+        
+        return angle1 < self.angle_threshold and angle2 < self.angle_threshold
+
     def recognize_gesture(self, results):
         if not results.multi_hand_landmarks:
             return None
@@ -125,54 +147,50 @@ class MotionTrainer:
         ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
         pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
-        # Gestos específicos
-        # 1. Mão de Stop (todos os dedos fechados)
-        if (abs(thumb_tip.y - wrist.y) < self.hand_threshold and
-            abs(index_tip.y - wrist.y) < self.hand_threshold and
-            abs(middle_tip.y - wrist.y) < self.hand_threshold and
-            abs(ring_tip.y - wrist.y) < self.hand_threshold and
-            abs(pinky_tip.y - wrist.y) < self.hand_threshold):
-            return 'pause'
+        # Verifica se estamos em cooldown
+        if self.cooldown > 0:
+            self.cooldown -= 1
+            return None
 
-        # 2. Sinal de 'V' (polegar e indicador levantados)
-        if (abs(thumb_tip.y - wrist.y) < self.hand_threshold and
-            abs(index_tip.y - wrist.y) < self.hand_threshold and
-            abs(middle_tip.y - wrist.y) > self.hand_threshold and
-            abs(ring_tip.y - wrist.y) > self.hand_threshold and
-            abs(pinky_tip.y - wrist.y) > self.hand_threshold):
-            return 'play'
+        # Função auxiliar para verificar se um dedo está levantado
+        def is_finger_up(finger_tip, wrist):
+            return finger_tip.y < wrist.y - self.hand_threshold
 
-        # 3. Dedo apontando para a direita (pular música)
-        if (abs(thumb_tip.y - wrist.y) > self.hand_threshold and
-            abs(middle_tip.y - wrist.y) > self.hand_threshold and
-            abs(ring_tip.y - wrist.y) > self.hand_threshold and
-            abs(pinky_tip.y - wrist.y) > self.hand_threshold and
-            index_tip.x > wrist.x + self.finger_threshold):
-            return 'skip'
+        # Função auxiliar para verificar se um dedo está fechado
+        def is_finger_down(finger_tip, wrist):
+            return finger_tip.y > wrist.y + self.hand_threshold
 
-        # 4. Dedo apontando para a esquerda (voltar música)
-        if (abs(thumb_tip.y - wrist.y) > self.hand_threshold and
-            abs(middle_tip.y - wrist.y) > self.hand_threshold and
-            abs(ring_tip.y - wrist.y) > self.hand_threshold and
-            abs(pinky_tip.y - wrist.y) > self.hand_threshold and
-            index_tip.x < wrist.x - self.finger_threshold):
-            return 'previous'
+        # Verifica a posição dos dedos
+        thumb_up = is_finger_up(thumb_tip, wrist)
+        index_up = is_finger_up(index_tip, wrist)
+        pinky_up = is_finger_up(pinky_tip, wrist)
+        ring_up = is_finger_up(ring_tip, wrist)
 
-        # 5. Dedo apontando para cima (aumentar volume)
-        if (abs(thumb_tip.x - wrist.x) > self.hand_threshold and
-            abs(middle_tip.x - wrist.x) > self.hand_threshold and
-            abs(ring_tip.x - wrist.x) > self.hand_threshold and
-            abs(pinky_tip.x - wrist.x) > self.hand_threshold and
-            index_tip.y < wrist.y - self.finger_threshold):
-            return 'volume_up'
+        # 1. Dedão levantado (play)
+        if thumb_up and not index_up and not pinky_up and not ring_up:
+            self.gesture_buffer.append('play')
 
-        # 6. Dedo apontando para baixo (diminuir volume)
-        if (abs(thumb_tip.x - wrist.x) > self.hand_threshold and
-            abs(middle_tip.x - wrist.x) > self.hand_threshold and
-            abs(ring_tip.x - wrist.x) > self.hand_threshold and
-            abs(pinky_tip.x - wrist.x) > self.hand_threshold and
-            index_tip.y > wrist.y + self.finger_threshold):
-            return 'volume_down'
+        # 2. Indicador levantado (pause)
+        elif not thumb_up and index_up and not pinky_up and not ring_up:
+            self.gesture_buffer.append('pause')
+
+        # 3. Mínimo levantado (aumentar volume)
+        elif not thumb_up and not index_up and not pinky_up and ring_up:
+            self.gesture_buffer.append('volume_up')
+
+        # 4. Dedo do lado do mínimo levantado (diminuir volume)
+        elif not thumb_up and not index_up and pinky_up and not ring_up:
+            self.gesture_buffer.append('volume_down')
+
+        # Se o buffer estiver cheio, verifica a maioria
+        if len(self.gesture_buffer) >= self.buffer_size:
+            most_common = max(set(self.gesture_buffer), key=self.gesture_buffer.count)
+            if self.gesture_buffer.count(most_common) >= self.buffer_size * 0.6:  # 60% de confiança
+                self.gesture_buffer = []  # Limpa o buffer
+                self.cooldown = self.cooldown_frames  # Inicia cooldown
+                return most_common
+            else:
+                self.gesture_buffer.pop(0)  # Remove o mais antigo
 
         return None
 
@@ -278,171 +296,78 @@ class MotionTrainer:
                 print("2. Você está conectado à uma conta")
                 print("3. A conta tem uma assinatura premium")
 
-    def capture_reference_image(self, action_name, output_dir="reference_images"):
-        """
-        Captura uma imagem de referência para um gesto específico
-        """
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        print(f"\nCapturando imagem de referência para '{action_name}'...")
-        print("(Pressione 's' para capturar, 'q' para sair)")
-
-        while True:
-            ret, frame = self.cap.read()
-            if not ret:
-                break
-
-            # Inverte a imagem horizontalmente
-            frame = cv2.flip(frame, 1)
-            
-            # Processa a imagem
-            processed_frame, results = self.detect_hands(frame)
-
-            # Mostra instruções na tela
-            cv2.putText(processed_frame, f"Posicione a mão para '{action_name}'", 
-                       (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            cv2.putText(processed_frame, "Pressione 's' para capturar", 
-                       (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-            cv2.imshow("Captura de Referência", processed_frame)
-
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('s'):
-                # Salva a imagem
-                filename = os.path.join(output_dir, f"{action_name}_reference.jpg")
-                cv2.imwrite(filename, processed_frame)
-                print(f"Imagem salva em: {filename}")
-                break
-            elif key == ord('q'):
-                break
-
-        cv2.destroyAllWindows()
-
-    def show_reference_images(self):
-        """
-        Mostra todas as imagens de referência disponíveis
-        """
-        reference_dir = "reference_images"
-        if not os.path.exists(reference_dir):
-            print("Nenhuma imagem de referência encontrada!")
-            return
-
-        print("\nImagens de Referência Disponíveis:")
-        print("--------------------------------")
-        for filename in os.listdir(reference_dir):
-            if filename.endswith(".jpg"):
-                print(f"- {filename}")
-
     def start_recognition(self):
-        print("\nModo de Reconhecimento")
-        print("----------------------")
-        print("Monitorando movimentos...")
-        print("(Pressione 'q' para sair)")
-
-        last_wrist_pos = None
+        """
+        Inicia o reconhecimento de gestos e voz
+        """
+        print("\nModo de Reconhecimento de Gestos")
+        print("--------------------------------")
+        print("(Diga 'sair' para voltar ao menu principal)")
 
         while True:
+            # Captura o frame da câmera
             ret, frame = self.cap.read()
             if not ret:
+                print("Erro ao capturar frame")
                 break
 
-            processed_frame, results = self.detect_hands(frame)
-            recognized_action = self.recognize_gesture(results)
+            # Converte para RGB
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image.flags.writeable = False
 
-            # Se reconheceu uma ação, adiciona ao buffer
-            if recognized_action:
-                self.action_buffer.append(recognized_action)
-                
-                # Se a maioria do buffer concorda com a ação e não está em cooldown
-                if (self.action_buffer.count(recognized_action) > len(self.action_buffer) * 0.6 and
-                    time.time() - self.last_action_time > self.action_cooldown):
-                    
-                    # Executa a ação
-                    self.execute_action(recognized_action)
-                    self.last_action_time = time.time()
+            # Detecta mãos
+            results = self.hands.process(image)
 
-            # Mostra o painel de reconhecimento
-            if processed_frame is not None:
-                cv2.putText(processed_frame, f"Status: {'Movimento detectado' if results.multi_hand_landmarks else 'Sem movimento'}", 
-                           (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
-                           (0, 255, 0) if results.multi_hand_landmarks else (0, 0, 255), 2)
-                
-                # Mostra as ações no buffer
-                buffer_text = "Buffer: " + ", ".join(list(self.action_buffer))
-                cv2.putText(processed_frame, buffer_text, 
-                           (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-                
-                # Mostra as linhas de referência para os gestos
-                # Linha para dedo apontando
-                cv2.line(processed_frame, (int(0.5 * processed_frame.shape[1]), 0),
-                         (int(0.5 * processed_frame.shape[1]), processed_frame.shape[0]),
-                         (255, 0, 0), 2)
-                
-                # Linha para volume up/down
-                cv2.line(processed_frame, (0, int(0.3 * processed_frame.shape[0])),
-                         (processed_frame.shape[1], int(0.3 * processed_frame.shape[0])),
-                         (0, 255, 0), 2)
-                cv2.line(processed_frame, (0, int(0.7 * processed_frame.shape[0])),
-                         (processed_frame.shape[1], int(0.7 * processed_frame.shape[0])),
-                         (0, 0, 255), 2)
-                
-                cv2.imshow("SkipSpot - Reconhecimento", processed_frame)
+            # Desenha os landmarks
+            image.flags.writeable = True
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            
+            if results.multi_hand_landmarks:
+                for hand_landmarks in results.multi_hand_landmarks:
+                    self.mp_drawing.draw_landmarks(
+                        image,
+                        hand_landmarks,
+                        mp_hands.HAND_CONNECTIONS
+                    )
 
+            # Reconhece gesto
+            gesture = self.recognize_gesture(results)
+            if gesture:
+                print(f"Gesto reconhecido: {gesture}")
+                self.execute_action(gesture)
+
+            # Mostra a imagem
+            cv2.imshow('SkipSpot - Controle de Música', image)
+
+            # Verifica se o usuário quer sair
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
+        # Limpa recursos
         self.cap.release()
         cv2.destroyAllWindows()
 
     def run(self):
-        print("\nSkipSpot - Modo Reconhecimento")
-        print("-----------------------------")
-        print("1. Capturar imagem de referência")
-        print("2. Mostrar imagens de referência")
-        print("3. Iniciar reconhecimento")
-        print("4. Reconhecer comando de voz")
-        print("(Pressione 'q' para sair)")
-        
+        """
+        Inicia o programa principal
+        """
+        print("\nSkipSpot - Controle de Música")
+        print("------------------------------")
+        print("1. Iniciar reconhecimento de gestos")
+        print("2. Reconhecer comando de voz")
+        print("'q' - Sair")
+
         while True:
-            choice = input("\nSelecione uma opção (1-4): ")
-            
+            choice = input("\nEscolha uma opção: ")
+
             if choice == '1':
-                print("\nGestos disponíveis para capturar:")
-                print("1. Mão fechada (Stop)")
-                print("2. Sinal de 'V'")
-                print("3. Dedo apontando para direita")
-                print("4. Dedo apontando para esquerda")
-                print("5. Dedo apontando para cima")
-                print("6. Dedo apontando para baixo")
-                
-                action_choice = input("\nSelecione o gesto (1-6): ")
-                action_names = {
-                    '1': 'stop',
-                    '2': 'v_sign',
-                    '3': 'right_point',
-                    '4': 'left_point',
-                    '5': 'up_point',
-                    '6': 'down_point'
-                }
-                
-                if action_choice in action_names:
-                    self.capture_reference_image(action_names[action_choice])
-                else:
-                    print("Opção inválida!")
-            
-            elif choice == '2':
-                self.show_reference_images()
-            
-            elif choice == '3':
                 self.start_recognition()
-                break
-            
-            elif choice == '4':
+            elif choice == '2':
                 self.recognize_voice_command()
-            
-            elif choice == 'q':
+            elif choice.lower() == 'q':
                 break
+            else:
+                print("Opção inválida. Tente novamente.")
 
 if __name__ == "__main__":
     trainer = MotionTrainer()

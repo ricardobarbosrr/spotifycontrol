@@ -1,39 +1,42 @@
-# Spotify Control - Controle de Música com Gestos e Voz
+# SkipSpot - Controle de Música por Gestos
 
-![SkipSpot em Ação](https://github.com/username/skipspot/raw/main/assets/skipspot-demo.gif)
+O SkipSpot é uma aplicação que permite controlar o Spotify usando gestos de mão e comandos de voz. Com ele, você pode pausar, retomar, pular músicas e ajustar o volume sem precisar tocar no seu dispositivo.
 
-SkipSpot é uma aplicação inovadora que combina reconhecimento de gestos e voz para controlar o Spotify. Com apenas movimentos da mão e comandos de voz, você pode controlar sua música sem precisar tocar no computador.
+## 🎮 Gestos Disponíveis
 
-## 🚀 Funcionalidades
+### Controle por Gestos de Mão
 
-- 🙏 **Gestos com a Mão**:
-  - Mão fechada: Pausar música
-  - Sinal de 'V': Retomar música
-  - Dedo apontando para direita: Pular música
-  - Dedo apontando para esquerda: Voltar música
-  - Dedo apontando para cima: Aumentar volume
-  - Dedo apontando para baixo: Diminuir volume
+| Dedo | Ação |
+|------|------|
+| Dedão | Play (Tocar música) |
+| Indicador | Pause (Pausar música) |
+| Mínimo (anular) | Aumentar Volume |
+| Dedo do lado do mínimo | Diminuir Volume |
 
-- 🎤 **Comandos de Voz**:
-  - "Pausar música"
-  - "Tocar música"
-  - "Pular música"
-  - "Música anterior"
-  - "Aumentar volume"
-  - "Diminuir volume"
+### Como usar os gestos
+1. Mantenha apenas um dedo levantado por vez
+2. Os outros dedos devem estar completamente fechados
+3. Mantenha a mão parada por alguns segundos para que o sistema reconheça o gesto
 
-## 📋 Pré-requisitos
+### Comandos de Voz
+- "Pausar música"
+- "Tocar música"
+- "Pular música"
+- "Música anterior"
+- "Aumentar volume"
+- "Diminuir volume"
 
-- Python 3.11 ou superior
-- Spotify Premium instalado e em execução
-- Web browser (Chrome, Firefox, etc.)
-- Microfone para comandos de voz
+## 🛠️ Requisitos
 
-## 📦 Instalação
+- Python 3.8 ou superior
+- Webcam
+- Conta do Spotify
+
+## 🚀 Instalação
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/username/skipspot.git
+git clone https://github.com/seu-usuario/skipspot.git
 cd skipspot
 ```
 
@@ -42,58 +45,23 @@ cd skipspot
 pip install -r requirements.txt
 ```
 
-3. Configure o Spotify:
-   - Acesse o [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - Faça login com sua conta do Spotify
-   - Clique em "Create an App"
-   - Preencha os campos:
-     - App Name: SkipSpot
-     - Description: Controle de música com gestos e voz
-     - Website: (opcional)
-   - Clique em "Create"
-   - Na aba "Settings":
-     - Adicione "http://localhost:8080" em "Redirect URIs"
-     - Copie o "Client ID" e "Client Secret"
+3. Configure suas credenciais do Spotify:
+   - Vá para o [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Crie uma nova aplicação
+   - Copie o Client ID e Client Secret
+   - Crie um arquivo `credentials.json` com o seguinte formato:
+   ```json
+   {
+       "client_id": "seu_client_id",
+       "client_secret": "seu_client_secret",
+       "redirect_uri": "http://localhost:8080"
+   }
+   ```
 
-4. Crie o arquivo `credentials.json`:
-```json
-{
-    "client_id": "SEU_CLIENT_ID",
-    "client_secret": "SEU_CLIENT_SECRET",
-    "redirect_uri": "http://localhost:8080"
-}
+4. Execute o programa:
+```bash
+python skipspot.py
 ```
-
-## 📝 Configuração do Spotify Developer Dashboard
-
-1. Acesse o [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Faça login com sua conta do Spotify
-3. Clique em "Create an App"
-4. Preencha os campos:
-   - App Name: SkipSpot
-   - Description: Controle de música com gestos e voz
-   - Website: (opcional)
-5. Clique em "Create"
-6. Na aba "Settings":
-   - Adicione "http://localhost:8080" em "Redirect URIs"
-   - Copie o "Client ID" e "Client Secret"
-7. Crie o arquivo `credentials.json` com as informações copiadas
-
-### Dicas para a Configuração do Spotify:
-
-1. **Redirect URI**:
-   - O valor deve ser exatamente "http://localhost:8080"
-   - Este é o endereço que o Spotify usará para redirecionar após a autenticação
-
-2. **Scopes Necessários**:
-   - `user-modify-playback-state`: Para controlar a reprodução (play/pause)
-   - `user-read-playback-state`: Para verificar o estado atual da reprodução
-   - `user-read-currently-playing`: Para saber qual música está tocando
-
-3. **Problemas Comuns**:
-   - Se não conseguir criar uma aplicação, verifique se sua conta do Spotify tem permissões de desenvolvedor
-   - Se não conseguir acessar o Dashboard, verifique se está logado com a conta correta
-   - Se os comandos não funcionarem, verifique se o Spotify está aberto e em execução
 
 ## 🎮 Como Usar
 
@@ -102,33 +70,35 @@ pip install -r requirements.txt
 python skipspot.py
 ```
 
-2. Selecione uma das opções:
-   - 1: Capturar imagem de referência (para treinar novos gestos)
-   - 2: Mostrar imagens de referência
-   - 3: Iniciar reconhecimento de gestos
-   - 4: Reconhecer comando de voz
+2. Escolha uma opção:
+   - 1: Iniciar reconhecimento de gestos
+   - 2: Reconhecer comando de voz
    - 'q': Sair
 
-3. Para comandos de voz:
-   - Diga "sair", "voltar" ou "menu" para retornar ao menu principal
-   - O sistema continuará ouvindo até você decidir sair
+3. Para gestos de mão:
+   - Faça os gestos com apenas um dedo levantado
+   - Mantenha a mão parada por alguns segundos
+   - O sistema tem um cooldown de 1 segundo entre cada ação
 
-## 🛠️ Configurações
+4. Para comandos de voz:
+   - Diga um dos comandos listados acima
+   - O sistema continuará ouvindo até você dizer "sair"
 
-- **Limite de Gestos**:
-  - `finger_threshold`: 0.15 (sensibilidade dos dedos)
-  - `hand_threshold`: 0.25 (sensibilidade da mão)
+## 📝 Notas Importantes
 
-- **Buffer de Reconhecimento**:
-  - 15 frames para confirmar um gesto
-  - 1 segundo de cooldown entre ações
+- Mantenha a mão na frente da câmera
+- Faça os gestos lentamente e mantenha-os por alguns segundos
+- O sistema tem um cooldown de 1 segundo entre cada ação
+- Você pode alternar entre controle por gestos e controle por voz a qualquer momento
 
-## 📝 Licença
+## 📱 Suporte
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Se encontrar algum problema ou tiver sugestões, por favor, abra uma issue no repositório.
 
-## 🙏 Agradecimentos
+## 📄 Licença
 
-- [MediaPipe](https://google.github.io/mediapipe/) - Para detecção de mãos
-- [Spotipy](https://spotipy.readthedocs.io/) - Para integração com o Spotify
-- [SpeechRecognition](https://pypi.org/project/SpeechRecognition/) - Para reconhecimento de voz
+Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+
+---
+
+Desenvolvido por [Seu Nome]
