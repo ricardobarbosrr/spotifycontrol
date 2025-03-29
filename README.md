@@ -33,7 +33,7 @@ SkipSpot é uma aplicação inovadora que combina reconhecimento de gestos e voz
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/ricardobarbosrr/skipspot.git
+git clone https://github.com/username/skipspot.git
 cd skipspot
 ```
 
@@ -44,6 +44,7 @@ pip install -r requirements.txt
 
 3. Configure o Spotify:
    - Acesse o [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Faça login com sua conta do Spotify
    - Clique em "Create an App"
    - Preencha os campos:
      - App Name: SkipSpot
@@ -62,6 +63,37 @@ pip install -r requirements.txt
     "redirect_uri": "http://localhost:8080"
 }
 ```
+
+## 📝 Configuração do Spotify Developer Dashboard
+
+1. Acesse o [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Faça login com sua conta do Spotify
+3. Clique em "Create an App"
+4. Preencha os campos:
+   - App Name: SkipSpot
+   - Description: Controle de música com gestos e voz
+   - Website: (opcional)
+5. Clique em "Create"
+6. Na aba "Settings":
+   - Adicione "http://localhost:8080" em "Redirect URIs"
+   - Copie o "Client ID" e "Client Secret"
+7. Crie o arquivo `credentials.json` com as informações copiadas
+
+### Dicas para a Configuração do Spotify:
+
+1. **Redirect URI**:
+   - O valor deve ser exatamente "http://localhost:8080"
+   - Este é o endereço que o Spotify usará para redirecionar após a autenticação
+
+2. **Scopes Necessários**:
+   - `user-modify-playback-state`: Para controlar a reprodução (play/pause)
+   - `user-read-playback-state`: Para verificar o estado atual da reprodução
+   - `user-read-currently-playing`: Para saber qual música está tocando
+
+3. **Problemas Comuns**:
+   - Se não conseguir criar uma aplicação, verifique se sua conta do Spotify tem permissões de desenvolvedor
+   - Se não conseguir acessar o Dashboard, verifique se está logado com a conta correta
+   - Se os comandos não funcionarem, verifique se o Spotify está aberto e em execução
 
 ## 🎮 Como Usar
 
