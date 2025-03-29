@@ -1,4 +1,4 @@
-# SkipSpot - Controle de Música com Gestos e Voz
+# Spotify Control - Controle de Música com Gestos e Voz
 
 ![SkipSpot em Ação](https://github.com/username/skipspot/raw/main/assets/skipspot-demo.gif)
 
@@ -33,7 +33,7 @@ SkipSpot é uma aplicação inovadora que combina reconhecimento de gestos e voz
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/username/skipspot.git
+git clone https://github.com/ricardobarbosrr/skipspot.git
 cd skipspot
 ```
 
