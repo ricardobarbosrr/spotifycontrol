@@ -1,6 +1,6 @@
-# SkipSpot - Controle de Música por Gestos
+# Spopy Control - Controle de Música por Gestos
 
-O SkipSpot é uma aplicação que permite controlar o Spotify usando gestos de mão e comandos de voz. Com ele, você pode pausar, retomar, pular músicas e ajustar o volume sem precisar tocar no seu dispositivo.
+O Spopy Control é uma aplicação que permite controlar o Spotify usando gestos de mão e comandos de voz. Com ele, você pode pausar, retomar, pular músicas e ajustar o volume sem precisar tocar no seu dispositivo.
 
 ## 🎮 Gestos Disponíveis
 
@@ -36,8 +36,8 @@ O SkipSpot é uma aplicação que permite controlar o Spotify usando gestos de m
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/skipspot.git
-cd skipspot
+git clone https://github.com/ricardobarbosrr/spopy-control.git
+cd spopy-control
 ```
 
 2. Instale as dependências:
@@ -60,14 +60,14 @@ pip install -r requirements.txt
 
 4. Execute o programa:
 ```bash
-python skipspot.py
+python spopy_control.py
 ```
 
 ## 🎮 Como Usar
 
 1. Execute o programa:
 ```bash
-python skipspot.py
+python spopy_control.py
 ```
 
 2. Escolha uma opção:

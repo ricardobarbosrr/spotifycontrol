@@ -1,21 +1,21 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    name='skipspot',
-    version='1.0.0',
+    name="spopy-control",
+    version="1.0.0",
     description='Controle de música do Spotify com gestos e voz',
     author='Seu Nome',
     author_email='seu.email@email.com',
     url='https://github.com/seu-usuario/skipspot',
-    packages=['skipspot'],
+    packages=find_packages(),
     install_requires=[
-        'opencv-python==4.8.0.74',
-        'numpy==1.24.3',
-        'spotipy==2.23.0',
-        'mediapipe==0.10.11',
-        'pandas==2.0.3',
-        'speech_recognition==3.14.2',
-        'pyaudio==0.2.14'
+        'opencv-python',
+        'numpy',
+        'spotipy',
+        'mediapipe',
+        'pandas',
+        'speech_recognition',
+        'pyaudio'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -29,7 +29,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'skipspot=skipspot:main'
+            'spopy-control=spopy_control:main'
         ]
     }
 )
